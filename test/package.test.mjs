@@ -16,7 +16,7 @@ test("npm tarball contains only intended files and loads independently through P
     const packed = await exec("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", temp], { cwd: root });
     const [info] = JSON.parse(packed.stdout);
     assert.deepEqual(info.files.map((file) => file.path).sort(), [
-      "CHANGELOG.md", "LICENSE", "README.md", "RELEASING.md", "extensions/index.js", "lib/policy.js", "package.json",
+      "CHANGELOG.md", "LICENSE", "README.md", "RELEASING.md", "extensions/index.js", "lib/policy.js", "lib/task-manager.js", "lib/task-runner.js", "lib/task-store.js", "package.json",
     ].sort());
     await exec("tar", ["-xzf", join(temp, info.filename), "-C", temp]);
     const loader = new DefaultResourceLoader({
@@ -28,6 +28,6 @@ test("npm tarball contains only intended files and loads independently through P
     const loaded = loader.getExtensions();
     assert.deepEqual(loaded.errors, []);
     assert.equal(loaded.extensions.length, 1);
-    assert.deepEqual([...loaded.extensions[0].tools.keys()], ["orca_terminal", "orca_agent"]);
+    assert.deepEqual([...loaded.extensions[0].tools.keys()], ["orca_terminal", "bg_run", "bg_status", "bg_logs", "bg_kill", "orca_agent"]);
   } finally { await rm(temp, { recursive: true, force: true }); }
 });

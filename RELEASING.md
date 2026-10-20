@@ -3,6 +3,9 @@
 1. Update version/changelog and run `npm test`.
 2. In a disposable Orca workspace, run `ORCA_SMOKE=1 npm run test:smoke`.
    Optionally add `ORCA_SMOKE_AGENT=pi` for a real model reply check; this uses quota.
+   Install the checkout into Pi and run `ORCA_MANAGED_SMOKE=1 npm run test:managed`
+   to verify automatic wake-up after success, failure, cancellation and reload.
+   This uses four real model responses and cleans up only its own terminals.
 3. Run `npm pack --dry-run` and inspect the exact file list. No credentials, machine paths, settings, node_modules, or transcripts belong in the package.
 4. Commit and push; check GitHub CI. Tag a release only after its checks pass.
 5. Authenticate locally using `npm login` and verify `npm whoami`.

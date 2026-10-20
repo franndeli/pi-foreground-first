@@ -1,7 +1,7 @@
 {
   "name": "pi-foreground-first",
-  "version": "0.1.0",
-  "description": "Foreground-first Pi workflows with user-confirmed Orca terminals and visible agents. No detached task manager or automatic model delegation.",
+  "version": "0.2.0",
+  "description": "Foreground-first Pi workflows with visible Orca background jobs, durable logs, cancellation, automatic completion follow-up, and native agent tabs.",
   "keywords": [
     "pi-package",
     "pi",
@@ -42,6 +42,7 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "test:smoke": "node test/orca-smoke.mjs",
+    "test:managed": "node test/managed-orca-smoke.mjs",
     "pack:check": "npm pack --dry-run",
     "prepublishOnly": "npm test"
   }

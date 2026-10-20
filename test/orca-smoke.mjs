@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { resolveOrca } from "../lib/policy.js";
@@ -28,7 +29,8 @@ try {
   const loaded = loader.getExtensions();
   assert.deepEqual(loaded.errors, []);
   const tools = loaded.extensions[0].tools;
-  const ctx = { cwd, hasUI: true, ui: { confirm: async () => true } }; // Explicit opt-in above authorizes only this test.
+  const sessionId = randomUUID();
+  const ctx = { cwd, hasUI: true, sessionManager: { getSessionId: () => sessionId, getEntries: () => [] }, ui: { confirm: async () => true } }; // Explicit opt-in above authorizes only this test.
   const launch = async (name, args) => {
     const result = await tools.get(name).definition.execute("smoke", args, undefined, undefined, ctx);
     const receipt = result.details?.receipt?.result;
@@ -40,6 +42,7 @@ try {
   };
   const terminal = await launch("orca_terminal", {
     title: "Normal shell task smoke test",
+    notifyOnCompletion: false, // This low-level loader test has no bound Pi conversation; managed-wakeup tests cover delivery.
     command: "printf 'NORMAL_TASK_STARTED\\n'; for step in 1 2 3 4 5; do printf 'NORMAL_TASK_PROGRESS_%s\\n' \"$step\"; sleep 2; done; printf 'ORCA_FOREGROUND_TERMINAL_OK\\n'",
   });
   // Prove the tool returns while an ordinary shell command is still running,

@@ -17,14 +17,18 @@ function harness(existingTools = []) {
     getAllTools: () => existingTools,
   };
   foregroundFirst(pi);
-  return { events, tools, commands, notices, ctx: { ui: { notify: (...args) => notices.push(args) } } };
+  return { events, tools, commands, notices, ctx: {
+    cwd: join(tmpdir(), "pi-no-task-fixture"),
+    sessionManager: { getSessionId: () => "fixture", getEntries: () => [] },
+    ui: { notify: (...args) => notices.push(args), setStatus() {} },
+  } };
 }
 
-test("extension registers only visible launch tools and no process/provider/timer machinery", () => {
+test("extension registers visible managed task tools without starting jobs during loading", () => {
   const h = harness();
-  assert.deepEqual([...h.tools.keys()], ["orca_terminal", "orca_agent"]);
-  assert.deepEqual([...h.commands.keys()], ["foreground-first"]);
-  assert.deepEqual([...h.events.keys()], ["before_agent_start", "session_start"]);
+  assert.deepEqual([...h.tools.keys()], ["orca_terminal", "bg_run", "bg_status", "bg_logs", "bg_kill", "orca_agent"]);
+  assert.deepEqual([...h.commands.keys()], ["bg", "jobs", "tasks", "logs", "kill", "bg-rerun", "foreground-first"]);
+  assert.deepEqual([...h.events.keys()], ["before_agent_start", "session_start", "session_shutdown"]);
 });
 
 test("foreground policy is additive, idempotent, and preserves existing guidelines", () => {
@@ -41,20 +45,17 @@ test("opaque upstream system prompt is preserved with policy appended", () => {
   assert.match(h.events.get("before_agent_start")(event).systemPrompt, /^opaque\n/);
 });
 
-test("warns about conflicting background extension, otherwise stays quiet", () => {
-  const h = harness([{ name: "bg_run" }]);
+test("session lifecycle starts and stops monitoring without spurious notifications", () => {
+  const h = harness();
   h.events.get("session_start")({}, h.ctx);
-  assert.equal(h.notices.length, 1);
-  assert.equal(h.notices[0][1], "warning");
-  const clean = harness();
-  clean.events.get("session_start")({}, clean.ctx);
-  assert.equal(clean.notices.length, 0);
+  h.events.get("session_shutdown")({}, h.ctx);
+  assert.equal(h.notices.length, 0);
 });
 
 test("status command describes actual capabilities", async () => {
   const h = harness();
   await h.commands.get("foreground-first").handler("", h.ctx);
-  assert.match(h.notices[0][0], /No hidden task manager/);
+  assert.match(h.notices[0][0], /automatic completion follow-up/);
 });
 
 test("real Pi resource loader loads packaged entrypoint and survives reload without duplicates", async () => {
@@ -71,7 +72,7 @@ test("real Pi resource loader loads packaged entrypoint and survives reload with
       const loaded = loader.getExtensions();
       assert.deepEqual(loaded.errors, []);
       assert.equal(loaded.extensions.length, 1);
-      assert.deepEqual([...loaded.extensions[0].tools.keys()], ["orca_terminal", "orca_agent"]);
+      assert.deepEqual([...loaded.extensions[0].tools.keys()], ["orca_terminal", "bg_run", "bg_status", "bg_logs", "bg_kill", "orca_agent"]);
       assert.equal(loaded.extensions[0].commands.has("foreground-first"), true);
     }
   } finally { await rm(temp, { recursive: true, force: true }); }
