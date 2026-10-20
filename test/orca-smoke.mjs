@@ -56,9 +56,19 @@ try {
       prompt: "Authorized integration smoke test. Reply with exactly ORCA_FOREGROUND_AGENT_OK and nothing else. Do not call tools, modify files, or start other processes.",
     });
     if (!handle.startsWith("term_")) throw new Error("Agent opened as a chat: launch verified, but this smoke script only verifies reply/cleanup for terminal-mode agents. Inspect and close the returned chat manually.");
-    await call(["terminal", "wait", "--terminal", handle, "--for", "tui-idle", "--timeout-ms", "120000"]);
-    const read = await call(["terminal", "read", "--terminal", handle]);
-    assert.ok(read.result?.terminal?.tail?.some((line) => line.trim() === "ORCA_FOREGROUND_AGENT_OK"), "Expected a completed agent reply in real Orca terminal");
+    // A freshly launched TUI can be idle before its initial prompt is consumed.
+    // Wait for observable reply content, not just an initial idle state. This
+    // bounded test-only readiness loop never resends the accepted prompt.
+    const deadline = Date.now() + 120000;
+    let replied = false;
+    let lastRead;
+    while (Date.now() < deadline) {
+      lastRead = await call(["terminal", "read", "--terminal", handle]);
+      replied = lastRead.result?.terminal?.tail?.some((line) => line.trim() === "ORCA_FOREGROUND_AGENT_OK");
+      if (replied) break;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    assert.ok(replied, "Expected completed agent reply; last terminal read: " + JSON.stringify(lastRead));
     console.log("PASS: real Pi-loaded orca_agent tool -> native visible agent -> delivered prompt -> model reply");
   }
 } finally {
