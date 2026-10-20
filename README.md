@@ -134,7 +134,8 @@ Automated tests cover CLI selection, structured arguments, explicit workspace ta
 Live tests are deliberately opt-in because they create real Orca tabs:
 
 ```sh
-# A harmless visible terminal, verify its output, then close only that test terminal:
+# A 10-second normal shell job: verify non-blocking launch, progress, completion,
+# then close only that test terminal (no agent or model involved):
 ORCA_SMOKE=1 npm run test:smoke
 
 # Also launch one real model worker and verify its reply (may use paid quota):
@@ -145,7 +146,7 @@ ORCA_SMOKE=1 ORCA_SMOKE_AGENT=pi npm run test:smoke
 
 The smoke test loads the shipped extension through Pi's actual resource loader and executes its registered tools through Pi's `exec` API. Its explicit environment opt-in authorizes a test-only confirmation stub. It does **not** automate the human confirmation dialog. The live agent reply/cleanup test currently requires Orca terminal-mode agent settings; chat receipt handling is covered by automated tests, not a live chat UI run.
 
-Tested live on macOS with Pi 1.3.0 and Orca: shell output, native Pi agent prompt delivery, model response, and owned-terminal cleanup. Windows/Linux CLI selection is unit-tested; no claim of live platform testing.
+Tested live on macOS with Pi 1.3.0 and Orca: an ordinary shell job continuing after tool return, five live progress markers and completion, native Pi agent prompt delivery, model response, and owned-terminal cleanup. Windows/Linux CLI selection is unit-tested; no claim of live platform testing.
 
 ### Layout
 

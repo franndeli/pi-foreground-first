@@ -38,17 +38,37 @@ try {
     console.log(name, JSON.stringify(result.details));
     return handle;
   };
-  const terminal = await launch("orca_terminal", { title: "Foreground-first smoke test", command: "printf 'ORCA_FOREGROUND_TERMINAL_OK\\n'" });
-  // Bounded readiness check of the test's own shell output, not model polling.
+  const terminal = await launch("orca_terminal", {
+    title: "Normal shell task smoke test",
+    command: "printf 'NORMAL_TASK_STARTED\\n'; for step in 1 2 3 4 5; do printf 'NORMAL_TASK_PROGRESS_%s\\n' \"$step\"; sleep 2; done; printf 'ORCA_FOREGROUND_TERMINAL_OK\\n'",
+  });
+  // Prove the tool returns while an ordinary shell command is still running,
+  // then observe streamed progress and completion without launching a model.
+  let observedRunning = false;
   let visibleOutput = false;
-  for (let attempt = 0; attempt < 20; attempt++) {
+  const progress = new Set();
+  const terminalDeadline = Date.now() + 30000;
+  while (Date.now() < terminalDeadline) {
     const read = await call(["terminal", "read", "--terminal", terminal]);
-    visibleOutput = read.result?.terminal?.tail?.some((line) => line.trim() === "ORCA_FOREGROUND_TERMINAL_OK");
+    const lines = read.result?.terminal?.tail?.map((line) => line.trim()) ?? [];
+    visibleOutput = lines.includes("ORCA_FOREGROUND_TERMINAL_OK");
+    if (lines.includes("NORMAL_TASK_STARTED") && !visibleOutput && !observedRunning) {
+      observedRunning = true;
+      console.log("PASS: launch returned while ordinary shell job was still running (no agent/model)");
+    }
+    for (const line of lines) {
+      if (/^NORMAL_TASK_PROGRESS_[1-5]$/.test(line) && !progress.has(line)) {
+        progress.add(line);
+        console.log("Visible output:", line);
+      }
+    }
     if (visibleOutput) break;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  assert.equal(visibleOutput, true, "Expected command output in real Orca terminal");
-  console.log("PASS: real Pi-loaded orca_terminal tool -> visible terminal -> expected output");
+  assert.equal(observedRunning, true, "Expected to observe an ordinary job still running after tool return");
+  assert.equal(progress.size, 5, "Expected all five progress markers from the shell job");
+  assert.equal(visibleOutput, true, "Expected command completion output in real Orca terminal");
+  console.log("PASS: real Pi-loaded orca_terminal -> concurrent normal job -> live progress -> completion");
 
   if (process.env.ORCA_SMOKE_AGENT) {
     const handle = await launch("orca_agent", {
