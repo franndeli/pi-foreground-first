@@ -1,70 +1,70 @@
 # pi-foreground-first
 
-**Managed background work you can see in Orca—without making every Pi action a background task.**
+A [Pi](https://pi.dev) extension for running background jobs in visible Orca terminals. Ordinary work stays in the main conversation; a slow command doesn't automatically become a background task.
 
-Routine work stays in the main Pi conversation. When background execution is useful, commands run in visible Orca terminals with **durable logs, exit status, cancellation, timeouts, and automatic completion notifications that wake Pi to continue**.
-
-| Work | Behavior |
-|---|---|
-| Ordinary reads, edits, dependent checks | Normal foreground Pi tools |
-| Explicit background job, server, watcher, independent test/build | Managed visible Orca terminal |
-| Job finishes, fails, times out, or is cancelled | Status + log tail delivered to the launching Pi session; automatic follow-up by default |
-| Pi reloads or exits | Orca-owned job continues; resume the same session to recover pending notifications |
-| Noninteractive CLI agent | Can use the same managed visible runner and exit-based result delivery |
-| Native interactive agent | Orca chat/terminal; use Orca orchestration for return messages |
-
-No dependency on `pi-background-tasks`, no provider/billing rewrites, no automatic multi-model delegation, and no invisible fallback when Orca cannot show a terminal.
+When a background job finishes, Pi gets its exit status and the last part of its output, then continues without you having to ask. You can watch the command in Orca, read its saved logs, or stop it from Pi.
 
 ## Install
 
-```sh
-pi install git:github.com/franndeli/pi-foreground-first
-```
-
-After the npm release is published:
+The package is on [npm](https://www.npmjs.com/package/pi-foreground-first):
 
 ```sh
 pi install npm:pi-foreground-first
 ```
 
-Local development checkout:
+**Release status:** npm currently contains the `0.0.0-stage` placeholder, not the working extension. Until the first functional release is published, install from GitHub:
 
 ```sh
-pi install /absolute/path/to/pi-foreground-first
-```
-
-Restart Pi or use `/reload` after updating. A fresh session avoids obsolete extension instructions left in conversation history.
-
-**Requirements**
-
-- Pi **>=1.3.0, <2.0** and Node.js >=22.19; tested against Pi 1.3.0.
-- Orca with native agent launch, JSON receipts and visible-terminal adoption.
-- Managed shell tasks currently require a **local macOS/Linux POSIX workspace**, with the same filesystem as Pi. Remote/SSH/WSL-cross-host and native Windows managed execution are refused, not silently emulated.
-- Tool-launched tasks require confirmation UI. The user-entered `/bg` command is explicit authorization and needs no additional confirmation dialog.
-
-`ORCA_CLI_COMMAND` chooses the executable when set; a development session uses `orca-dev`. Linux outside Orca uses `orca-ide`, never the unrelated GNOME screen reader. No automatic fallback to another executable occurs.
-
-## Migration
-
-```sh
-pi remove npm:pi-background-tasks
 pi install git:github.com/franndeli/pi-foreground-first
 ```
 
-Remove your exact source/scope if the old extension was installed from git, a pinned version, or project settings (`pi list`; `pi remove <source> -l` for project scope). Finish/stop its jobs before removing their owner. This package does not adopt old `.pi/tasks` records.
+Use `/reload` or restart Pi after installing or updating.
 
-The familiar `bg_run`, `bg_status`, `bg_logs`, `bg_kill`, `/bg`, `/jobs`, `/logs`, and `/kill` now operate on **visible Orca-backed managed jobs**. This is not complete API compatibility: the old Fusion, inspect-only context-seeded delegate, attestation, Anthropic-attribution, and custom task-dock subsystems are not bundled. Keep your separate billing/provider extension if needed.
+You'll need Pi >=1.3.0 and <2.0, Node.js >=22.19, and a recent Orca installation. Managed jobs currently work in local macOS/Linux workspaces. Windows and remote workspaces aren't supported for managed jobs yet.
 
-## Quick start
+If you're replacing `pi-background-tasks`, stop its running jobs and remove it first:
+
+```sh
+pi remove npm:pi-background-tasks
+```
+
+Use `pi list` to find the exact source if you installed a pinned version or used git. Add `-l` when removing a project-local installation. Old tasks and logs aren't imported.
+
+## Use it
+
+Start a server or another command you want to leave running:
 
 ```text
 /bg npm run dev
-/jobs
-/logs <task-uuid>
-/kill <task-uuid>
 ```
 
-Or ask Pi to run genuinely independent work in the background. It can call:
+It opens in an Orca tab without switching focus. Pi returns a task ID and log path. When the command exits, a notification brings the result back into the conversation and wakes Pi for a follow-up.
+
+```text
+/jobs                    List tasks in this session
+/logs <task-id>           Read a task's output
+/kill <task-id>           Stop a task
+/bg-rerun <task-id>       Run its command again as a new task
+```
+
+`/tasks` is an alias for `/jobs`. `/foreground-first` shows a short explanation of the workflow.
+
+You can also ask Pi to run something in the background. It uses `bg_run` and asks for confirmation before opening the terminal. Typing `/bg` yourself is already authorization, so it doesn't add another confirmation dialog.
+
+Foreground-first is guidance, not a restriction on Pi's shell tool. The point is to keep routine reads, edits and checks in the conversation, and use background execution when you ask for it, for a server or watcher, or when there's genuinely separate work to do.
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `bg_run` | Start a managed command using `name` and `command` |
+| `orca_terminal` | The same runner, with `title` instead of `name` |
+| `bg_status` | Inspect a task, or list up to 50 recent tasks |
+| `bg_logs` | Read a saved log tail |
+| `bg_kill` | Request cancellation |
+| `orca_agent` | Open a native interactive Orca agent |
+
+For example, Pi can call `bg_run` with:
 
 ```json
 {
@@ -74,121 +74,80 @@ Or ask Pi to run genuinely independent work in the background. It can call:
 }
 ```
 
-`bg_run` returns promptly with a task UUID, visible Orca terminal handle, and full log path. Pi can do other work or yield. Once the command exits, a `foreground-task-notification` carries its real status, exit code and bounded output tail, and **starts/queues Pi's next turn without another user message**.
+Both command-launch tools accept these options:
 
-The extension monitors local task records itself. The model should not repeatedly poll status/log tools merely to wait.
-
-### Notification controls
-
-Both launch tools accept:
-
-| Option | Default | Effect |
+| Option | Default | Meaning |
 |---|---|---|
-| `notifyOnCompletion` | `true` | Deliver a visible custom message to the launching session |
-| `triggerOnCompletion` | `true` | Wake Pi/queue a follow-up; requires notifications enabled |
-| `timeoutSeconds` | None | Command deadline, enforced by the runner even while Pi is closed; maximum seven days |
-| `maxOutputBytes` | 20 MiB | Combined output cap; exceeding it stops/fails the command |
-| `focus` | `false` | Make a visible tab without stealing focus; set true to reveal it |
+| `notifyOnCompletion` | `true` | Send the result back to the launching Pi session |
+| `triggerOnCompletion` | `true` | Let Pi continue automatically after receiving it |
+| `timeoutSeconds` | No timeout | Stop the command after this many seconds; maximum seven days |
+| `maxOutputBytes` | 20 MiB | Stop the command if its combined output exceeds this limit |
+| `focus` | `false` | Switch to the new terminal when it opens |
 
-Set `triggerOnCompletion:false` for notification-only delivery. Set `notifyOnCompletion:false` to disable automatic messages entirely. Explicit status/log inspection still works.
+Set `triggerOnCompletion:false` if you want the notification without another model turn. Set `notifyOnCompletion:false` to turn off automatic delivery entirely. Status and log tools still work.
 
-## Tools and commands
+`bg_status`, `bg_logs` and `bg_kill` take the exact `taskId` returned at launch. `bg_logs` also accepts `maxBytes`: the default is 16,000 bytes and the maximum is 50 KiB. Notifications include up to 4,000 bytes of output and a path to the full log.
 
-### `bg_run` / `orca_terminal`
+`/bg` treats everything after the command name as the shell command. It doesn't parse options such as `--name` or `--timeout`; use `bg_run` for those settings.
 
-These are two interfaces to **the same managed runner**; never launch both for one job.
+### How commands run
 
-- `bg_run`: `{ name, command, ...options }`
-- `orca_terminal`: `{ title, command, ...options }`
+Managed jobs run in the current Pi working directory, under `$SHELL -c` or `/bin/sh -c`, without login-shell startup files. Standard input is closed, so these are noninteractive jobs. Output appears live in Orca and is saved to disk.
 
-Tool launches show a confirmation with the original command, cwd and notification settings. The managed cwd is always this Pi session's cwd. For compatibility, `orca_terminal.worktree` accepts exactly `path:<cwd>`; other workspaces are refused for managed execution.
+`orca_terminal.worktree`, if supplied, must be `path:<Pi's cwd>`. Running managed commands in another workspace isn't supported yet.
 
-Commands run under `$SHELL -c` (or `/bin/sh -c`) without login startup files. Standard input is closed: use this for **noninteractive jobs**. Output streams live to the visible terminal and is also saved locally. Ctrl+C/cancellation stops the runner-owned command group. Use `orca_agent` for interactive agent TUIs.
+The command doesn't start until Orca confirms a visible local terminal. If launch fails or the result is ambiguous, the extension won't silently start a hidden process or retry the command.
 
-The command is stored in JSON, not interpolated into the launcher. A runner gate prevents execution until Orca confirms a **visible, local** terminal. An invisible-adoption fallback, ambiguous receipt, or pre-launch cancellation never opens that gate. There is no blind launch retry.
+Cancellation sends TERM to the command's process group, then KILL after two seconds if needed. `bg_kill` returns a stop request; the completion notification follows once the runner has observed the exit. Use `/kill` before closing a terminal if you want a recorded cancellation. If the runner is forcibly killed, the extension reports an interruption rather than guessing whether its children finished.
 
-### `bg_status`
+Finished tabs stay open so you can inspect them. An open tab doesn't mean the command is still running—check its task status.
 
-`{ taskId? }`: inspect one exact task UUID, or list up to 50 recent tasks in this session. Includes real command state, exit code, terminal handle and log path. A terminal tab's shell remaining open does **not** mean the managed command is still running.
+## Agent workers
 
-### `bg_logs`
-
-`{ taskId, maxBytes? }`: read a bounded log tail (default 16,000 bytes, maximum 50 KiB). Returns the full local path and whether the tail is truncated. Notifications include at most 4,000 bytes. Command output is untrusted data, not agent instructions.
-
-### `bg_kill`
-
-`{ taskId }`: write a cancellation request for the task's own runner. It sends TERM to its command process group, escalating to KILL after two seconds if necessary. The tool returns **stop requested**, not an invented stopped verdict. Cancellation notification is emitted after the runner observes exit and finalizes logs.
-
-Only exact task UUIDs belonging to this session are accepted. No arbitrary-PID or stop-all interface is exposed. Use `/kill` before closing a task terminal if you need a recorded cancellation. A force-killed runner cannot attest its descendants' outcome; recovery reports interruption/unknown outcome, never success.
-
-### User commands
+A noninteractive agent command can use the same background runner:
 
 ```text
-/bg <shell command>       Explicitly launch a managed visible job; auto-follow-up defaults on
-/jobs                    List this session's tasks
-/tasks                   Alias for /jobs
-/logs <task UUID>         Read a bounded log tail
-/kill <task UUID>         Request cancellation
-/bg-rerun <task UUID>     Explicitly run the same command as a NEW task with current defaults
-/foreground-first        Explain the execution policy
+/bg pi --print 'Review the current changes without editing files; report findings.'
 ```
 
-`/bg` takes the command literally; it does not implement the old package's leading flag parser. Use the model-callable launch tool when you need a custom name/timeout/notification options.
+Its output stays visible, and Pi receives the result when the command exits. Add the CLI's model/provider flags if you want a specific model. The worker uses its normal credentials and permissions; it doesn't inherit the parent conversation automatically.
 
-## Model workers
-
-For an explicitly requested noninteractive CLI agent, a managed command can provide the same exit-based notification/result loop as a build or test:
-
-```json
-{
-  "name": "Review worker",
-  "command": "pi --print 'Review the current changes without editing files; report findings.'"
-}
-```
-
-Choose model/provider flags explicitly when needed. It uses the CLI's configured credentials and normal permissions; no provider, authentication, sandbox, or billing policy is changed. Output is visible and the bounded result tail comes back on exit. There is no implicit parent-context copy.
-
-For an interactive worker use `orca_agent`:
+For an interactive worker, use `orca_agent`:
 
 ```json
 {
   "agent": "pi",
-  "prompt": "Review the authentication changes without editing files. Report findings with paths.",
-  "focus": false
+  "prompt": "Review the authentication changes without editing files. Report findings with paths."
 }
 ```
 
-Optional `model`, `effort` (requires model), and `worktree` follow native Orca behavior. Orca's Chat UI settings decide chat versus terminal. **An interactive agent remains alive after answering**, so its process exit is not a reliable answer-completion signal; use the `orchestration` skill for supervised return messages, or use a noninteractive managed command above. A launch receipt is not a completed answer.
+It follows your Orca Chat UI setting, opening either a chat or terminal. Optional fields are `model`, `effort`, `worktree` and `focus`; `effort` requires an explicit `model`.
 
-For full handoffs read the `orca-cli` skill. For coordinated workers read `orchestration`. Concurrent writers should use separate worktrees; this extension does not silently create checkouts or isolate file writes.
+Interactive agents stay alive after answering, so this tool only returns the launch and prompt-delivery result. Use the `orchestration` skill for coordinated return messages, or a noninteractive command when you want exit-based completion. The `orca-cli` skill covers handoffs and worktrees. Separate workers that edit files should use separate worktrees.
 
-## Persistence, visibility and safety
+## Reloads, recovery and limits
 
-Tasks live under:
+Orca owns the running jobs, not the parent Pi process. They continue across `/reload` or Pi exiting. Resume the same Pi session to recover pending notifications; a new conversation won't receive another session's results. Pi can't run a follow-up while it's closed.
+
+Task records and logs are stored under:
 
 ```text
-<cwd>/.pi/foreground-tasks/<hash-of-Pi-session-id>/<task-uuid>/
-  spec.json       command, owner session and execution settings
-  launch.json     Orca receipt/terminal identity
-  start.json      verified visible-placement execution gate
-  runner.claim    exclusive execution claim; replay cannot execute twice
-  state.json      heartbeat and finalized state/exit code
-  output.log      bounded durable combined output
-  stop.json       cancellation request, if any
-  delivered.json  notification acknowledged in Pi's transcript
+<cwd>/.pi/foreground-tasks/<session-hash>/<task-id>/
 ```
 
-Metadata is atomically replaced with file/directory synchronization on POSIX. Logs are synchronized before terminal state is published. The runner is owned by the visible Orca terminal, not Pi, so it continues across Pi reload/exit. The monitor starts only with the session, stops on shutdown, and resumes tracking that **same session** later. It never delivers another session's tasks into a new conversation.
+The runner saves and synchronizes its logs before publishing a final status. The monitor checks Pi's transcript before marking a notification delivered. A crash between queuing and saving a notification can cause it to be delivered again on resume; delivery isn't guaranteed to be exactly once across a crash.
 
-Notification delivery is deduplicated against Pi's transcript and durable delivery record. Queued-but-not-persisted notifications are retried on resume: this is **at-least-once crash recovery**, not a claim of perfect exactly-once delivery across crashes. If Pi is closed, it cannot run a model; pending results are delivered when the launching session is resumed.
+The footer shows active and finished counts. The extension also sends lifecycle events to Orca's existing Pi status integration. It doesn't need the model to poll for progress.
 
-A missing runner, stale heartbeat, or unverified process outcome is surfaced explicitly. A runner that never starts has a 90-second authorization expiry and cannot later execute the command. Jobs have an optional timeout and a bounded output cap. This is process management, **not an OS sandbox**; commands have your user permissions and can use credentials/network services.
+A few things to keep in mind:
 
-The footer shows active/finished counts. Job lifecycle events are also emitted for Orca's existing Pi status integration, so ordinary managed jobs can remain visible as activity while the parent waits. No custom terminal renderer or detached hidden process dock is required.
+- Commands run with your permissions. This isn't a sandbox, and it doesn't change authentication or billing.
+- Logs aren't deleted automatically and may contain sensitive output. Don't commit `.pi/foreground-tasks`.
+- If Orca is unavailable, keep the work in the foreground. There is no hidden-process fallback.
+- `ORCA_CLI_COMMAND` overrides the CLI executable. Development sessions use `orca-dev`; Linux outside Orca uses `orca-ide` to avoid the unrelated GNOME screen reader.
+- This is an independent implementation, not a drop-in replacement for every `pi-background-tasks` feature. Fusion, context-seeded delegates, attestation and Anthropic-attribution features aren't included.
 
-Finished Orca tabs stay open for inspection; the extension does not close arbitrary user tabs. Old task records/logs are not deleted automatically. They can contain sensitive command output—do not commit them or publish them.
-
-## Testing
+## Development
 
 ```sh
 npm install --ignore-scripts
@@ -196,38 +155,34 @@ npm test
 npm run pack:check
 ```
 
-Tests cover real runner processes, success/nonzero exits, cancellation and TERM escalation, timeout, output caps, durable bounded logs, the visible-launch gate, duplicate-run prevention, session isolation, reload/resume delivery, lifecycle events, Pi resource loading, and the actual npm tarball.
-
-Live Orca tests are opt-in:
+Pi and TypeBox are host-provided peer dependencies. There's no build step. To load a local checkout:
 
 ```sh
-# Normal 10-second shell job: nonblocking launch, five progress markers, completion, cleanup
+pi install /absolute/path/to/pi-foreground-first
+```
+
+The tests cover command execution, cancellation, timeouts, output limits, notification recovery, Pi loading and the packaged npm tarball. Live Orca tests are separate because they open real terminals:
+
+```sh
+# A normal shell job with progress output
 ORCA_SMOKE=1 npm run test:smoke
 
-# Also verify a native interactive Pi agent reply (uses model quota)
+# Also launch an interactive Pi worker; uses model quota
 ORCA_SMOKE=1 ORCA_SMOKE_AGENT=pi npm run test:smoke
 
-# Full native Pi -> /bg -> visible job -> automatic notification -> model reply:
-# success, failure, cancellation, and /reload with the same runner PID.
-# Uses four real Pi model responses; no follow-up user prompts.
+# Success, failure, cancellation and reload, each followed by an automatic Pi reply
+# Uses four model responses
 ORCA_MANAGED_SMOKE=1 npm run test:managed
 ```
 
-Set `ORCA_SMOKE_CWD` to an existing local Orca workspace. Install this checkout into Pi before the managed end-to-end suite so fresh native agents load it. Live agent tests require terminal-mode Pi settings; chat launch receipts are unit-tested, not live chat UI automation.
+Set `ORCA_SMOKE_CWD` to an existing Orca workspace if needed. Install the checkout into Pi before running the managed tests so fresh agents load it. Live agent tests require terminal-mode Pi settings. The low-level tool test supplies confirmation itself; the end-to-end tests use `/bg` as user authorization. Each test closes only the terminals it created.
 
-Live coverage is macOS + Pi 1.3.0 + Orca. Linux runs automated CI; live Linux/Windows/remote UI behavior is not claimed. Low-level tool smoke tests use an explicit test-only confirmation stub; real end-to-end tests use user-command authorization via `/bg`.
+Live testing has been done on macOS with Pi 1.3.0 and Orca. Automated CI also runs on Linux. Chat-mode receipts have unit coverage, but the live tests don't drive the chat UI.
 
-## Development and release
+The entry point is `extensions/index.js`. `lib/task-manager.js` handles launches and notifications, `lib/task-runner.js` runs inside the Orca terminal, and `lib/task-store.js` handles persistence. Foreground guidance and native agent launching live in `lib/policy.js`.
 
-```text
-extensions/index.js        tools, commands and session hooks
-lib/policy.js              foreground guidance and native interactive-agent launches
-lib/task-manager.js        visible task launch, observer, notifications and Orca lifecycle events
-lib/task-runner.js         terminal-owned execution, output, timeout and cancellation
-lib/task-store.js          durable task records, recovery and bounded logs
-test/                     automated and opt-in live integration tests
-```
+See [RELEASING.md](RELEASING.md) for publishing instructions.
 
-Pi and TypeBox are host-provided peer dependencies; no build step or old-background-package dependency is required. See [RELEASING.md](RELEASING.md) for npm publication. Only runtime files and documentation belong in the tarball—never credentials, settings, local task artifacts or transcripts.
+## License
 
-MIT. Independent implementation, not a vendored copy of `pi-background-tasks`.
+MIT.
