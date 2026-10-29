@@ -251,11 +251,9 @@ test("invisible Orca fallback never gets execution approval", async (t) => {
   assert.ok(existsSync(join(dir, "stop.json")));
 });
 
-test("confirmation rejection, headless mode, invalid timeout and remote targets launch nothing", async (t) => {
+test("invalid timeout and remote targets launch nothing, and launching never asks for confirmation", async (t) => {
   const h = setup(t), calls = cliHarness(h);
-  h.ctx.ui.confirm = async () => false;
-  assert.equal((await h.manager.run({ name: "test", command: "true" }, h.ctx)).details.cancelled, true);
-  await assert.rejects(h.manager.run({ name: "test", command: "true" }, { ...h.ctx, hasUI: false }), /confirmation/);
+  h.ctx.ui.confirm = async () => assert.fail("bg launches must not ask for confirmation");
   await assert.rejects(h.manager.run({ name: "test", command: "true", timeoutSeconds: -1 }, h.ctx), /timeoutSeconds/);
   await assert.rejects(h.manager.run({ name: "test", command: "true", worktree: "name:remote" }, h.ctx), /local cwd/);
   assert.equal(calls.length, 0); assert.deepEqual(listTasks(h.root), []);

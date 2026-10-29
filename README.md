@@ -49,7 +49,7 @@ It opens in an Orca tab without switching focus. Pi returns a task ID and log pa
 
 `/tasks` is an alias for `/jobs`. `/foreground-first` shows a short explanation of the workflow.
 
-You can also ask Pi to run something in the background. It uses `bg_run` and asks for confirmation before opening the terminal. Typing `/bg` yourself is already authorization, so it doesn't add another confirmation dialog.
+You can also ask Pi to run something in the background. It uses `bg_run` and opens the terminal straight away, without a confirmation dialog. Only `orca_agent`, which starts another agent session, still asks first.
 
 Foreground-first is guidance, not a restriction on Pi's shell tool. The point is to keep routine reads, edits and checks in the conversation, and use background execution when you ask for it, for a server or watcher, or when there's genuinely separate work to do.
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `bg_run` and `orca_terminal` start immediately instead of asking "Run in a managed visible Orca terminal?" every time; `orca_agent` still asks, because it starts another agent session.
+- In a non-TUI host (e.g. an embedding app running Pi in rpc mode) the Orca tools and foreground-first policy are switched off.
+
 ## 0.2.0
 
 - Restore managed background execution in visible Orca terminals: `bg_run`, `bg_status`, `bg_logs`, `bg_kill`, and `/bg`, `/jobs`, `/tasks`, `/logs`, `/kill`, `/bg-rerun`.

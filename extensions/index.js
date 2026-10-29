@@ -41,7 +41,7 @@ export default function foregroundFirst(pi) {
 
   pi.registerTool({
     name: "orca_terminal", label: "Managed Orca Terminal",
-    description: "Run a user-confirmed command in a visible Orca terminal with durable logs, exit status, cancellation, and automatic completion/failure follow-up. Routine commands stay foreground. Same managed runner as bg_run.",
+    description: "Run a command in a visible Orca terminal with durable logs, exit status, cancellation, and automatic completion/failure follow-up. Routine commands stay foreground. Same managed runner as bg_run.",
     promptSnippet: "Run an explicitly backgrounded shell job visibly in Orca, with automatic completion delivery",
     parameters: Type.Object({ title: Type.String({ minLength: 1 }), command: Type.String({ minLength: 1 }), ...shared, ...managed }),
     execute: (_id, input, signal, _onUpdate, ctx) => tasks.run(input, ctx, signal),
@@ -96,7 +96,7 @@ export default function foregroundFirst(pi) {
     description: "Run an explicitly requested managed visible shell job: /bg <command>",
     handler: async (command, ctx) => {
       if (!command.trim()) { ctx.ui.notify("Usage: /bg <shell command>", "info"); return; }
-      const launched = await tasks.run({ name: command.slice(0, 60), command }, ctx, undefined, { confirmed: true });
+      const launched = await tasks.run({ name: command.slice(0, 60), command }, ctx, undefined);
       ctx.ui.notify(launched.content[0].text, launched.isError ? "error" : "info");
     },
   });
@@ -113,7 +113,7 @@ export default function foregroundFirst(pi) {
     description: "Explicitly rerun a previous command as a new visible task: /bg-rerun <task UUID>",
     handler: async (id, ctx) => {
       const prior = tasks.status(ctx, id.trim());
-      const launched = await tasks.run({ name: prior.name, command: prior.command }, ctx, undefined, { confirmed: true });
+      const launched = await tasks.run({ name: prior.name, command: prior.command }, ctx, undefined);
       ctx.ui.notify(launched.content[0].text, launched.isError ? "error" : "info");
     },
   });
