@@ -17,7 +17,7 @@ function harness(existingTools = []) {
     getAllTools: () => existingTools,
   };
   foregroundFirst(pi);
-  return { events, tools, commands, notices, ctx: {
+  return { pi, events, tools, commands, notices, ctx: {
     cwd: join(tmpdir(), "pi-no-task-fixture"),
     sessionManager: { getSessionId: () => "fixture", getEntries: () => [] },
     ui: { notify: (...args) => notices.push(args), setStatus() {} },
@@ -50,6 +50,19 @@ test("session lifecycle starts and stops monitoring without spurious notificatio
   h.events.get("session_start")({}, h.ctx);
   h.events.get("session_shutdown")({}, h.ctx);
   assert.equal(h.notices.length, 0);
+});
+
+test("an embedding host (non-TUI mode) gets neither the Orca tools nor the policy", () => {
+  const h = harness();
+  let active = ["read", "bash", "bg_run", "orca_terminal", "orca_agent", "background_command"];
+  const pi = h.pi;
+  pi.getActiveTools = () => active;
+  pi.setActiveTools = (names) => { active = names; };
+  h.events.get("session_start")({}, { ...h.ctx, mode: "rpc" });
+  assert.deepEqual(active, ["read", "bash", "background_command"]);
+  const event = { systemPrompt: "base", systemPromptOptions: { promptGuidelines: [] } };
+  h.events.get("before_agent_start")(event);
+  assert.deepEqual(event.systemPromptOptions.promptGuidelines, []);
 });
 
 test("status command describes actual capabilities", async () => {

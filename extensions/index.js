@@ -15,16 +15,28 @@ const managed = {
 const TaskId = Type.String({ description: "Exact task UUID returned by bg_run, orca_terminal, or /bg" });
 const asResult = (value) => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }], details: value });
 
+const OWN_TOOLS = ["orca_terminal", "bg_run", "bg_status", "bg_logs", "bg_kill", "orca_agent"];
+
 export default function foregroundFirst(pi) {
   const tasks = new TaskManager(pi);
+  // Orca terminals run Pi as a TUI; an embedding host (e.g. ThinkRail, mode "rpc") has its own background tools.
+  let enabled = true;
   pi.on("before_agent_start", (event) => {
+    if (!enabled) return;
     const options = event.systemPromptOptions;
     for (const guideline of GUIDELINES) {
       if (!options.promptGuidelines.includes(guideline)) options.promptGuidelines.push(guideline);
     }
     if (options.forceSystemPrompt) return { systemPrompt: event.systemPrompt + "\n\n<foreground_first>\n" + GUIDELINES.join("\n") + "\n</foreground_first>" };
   });
-  pi.on("session_start", (_event, ctx) => tasks.start(ctx));
+  pi.on("session_start", (_event, ctx) => {
+    enabled = ctx.mode === undefined || ctx.mode === "tui";
+    if (!enabled) {
+      pi.setActiveTools(pi.getActiveTools().filter((name) => !OWN_TOOLS.includes(name)));
+      return;
+    }
+    return tasks.start(ctx);
+  });
   pi.on("session_shutdown", () => tasks.stop());
 
   pi.registerTool({
