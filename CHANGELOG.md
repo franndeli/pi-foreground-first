@@ -1,8 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
+
+- README: npm, CI, license and Pi package badges; removed the outdated notice saying npm only had a placeholder.
+
+## 0.3.0
 
 - `bg_run` and `orca_terminal` start immediately instead of asking "Run in a managed visible Orca terminal?" every time; `orca_agent` still asks, because it starts another agent session.
+
+## 0.2.1
+
 - In a non-TUI host (e.g. an embedding app running Pi in rpc mode) the Orca tools and foreground-first policy are switched off.
 
 ## 0.2.0
