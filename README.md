@@ -1,20 +1,20 @@
 # pi-foreground-first
 
+[![npm version](https://img.shields.io/npm/v/pi-foreground-first?logo=npm)](https://www.npmjs.com/package/pi-foreground-first)
+[![npm downloads](https://img.shields.io/npm/dm/pi-foreground-first)](https://www.npmjs.com/package/pi-foreground-first)
+[![CI](https://github.com/franndeli/pi-foreground-first/actions/workflows/test.yml/badge.svg)](https://github.com/franndeli/pi-foreground-first/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Pi package](https://img.shields.io/badge/pi-package-8A2BE2)](https://pi.dev/packages/pi-foreground-first)
+
 A [Pi](https://pi.dev) extension for running background jobs in visible Orca terminals. Ordinary work stays in the main conversation; a slow command doesn't automatically become a background task.
 
 When a background job finishes, Pi gets its exit status and the last part of its output, then continues without you having to ask. You can watch the command in Orca, read its saved logs, or stop it from Pi.
 
 ## Install
 
-The package is on [npm](https://www.npmjs.com/package/pi-foreground-first):
-
 ```sh
 pi install npm:pi-foreground-first
-```
-
-**Release status:** npm currently contains the `0.0.0-stage` placeholder, not the working extension. Until the first functional release is published, install from GitHub:
-
-```sh
+# or straight from GitHub:
 pi install git:github.com/franndeli/pi-foreground-first
 ```
 
