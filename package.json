@@ -1,6 +1,6 @@
 {
   "name": "pi-foreground-first",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Foreground-first Pi workflows with visible Orca background jobs, durable logs, cancellation, automatic completion follow-up, and native agent tabs.",
   "keywords": [
     "pi-package",
