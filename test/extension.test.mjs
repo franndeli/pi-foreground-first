@@ -31,6 +31,21 @@ test("extension registers visible managed task tools without starting jobs durin
   assert.deepEqual([...h.events.keys()], ["before_agent_start", "session_start", "session_shutdown"]);
 });
 
+test("orca_agent always launches the Pi harness, with the requested model", async () => {
+  const h = harness();
+  const calls = [];
+  h.pi.exec = async (cli, args) => {
+    calls.push(args);
+    return { code: 0, stdout: JSON.stringify({ ok: true, result: { outcome: { kind: "terminal", handle: "term_1" }, prompt: { outcome: "handed-to-terminal" } } }) };
+  };
+  const ctx = { ...h.ctx, hasUI: true, ui: { ...h.ctx.ui, confirm: async () => true } };
+  const result = await h.tools.get("orca_agent").execute("id", { agent: "codex", prompt: "review", model: "openai-codex/gpt-6.1-sol" }, undefined, undefined, ctx);
+  assert.equal(result.isError, undefined);
+  const args = calls[0];
+  assert.equal(args[args.indexOf("--agent") + 1], "pi");
+  assert.equal(args[args.indexOf("--model") + 1], "openai-codex/gpt-6.1-sol");
+});
+
 test("foreground policy is additive, idempotent, and preserves existing guidelines", () => {
   const h = harness();
   const event = { systemPrompt: "base", systemPromptOptions: { promptGuidelines: ["existing"] } };

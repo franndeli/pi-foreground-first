@@ -1,6 +1,6 @@
 import { Type } from "typebox";
 import { GUIDELINES, launchVisible } from "../lib/policy.js";
-import { TaskManager } from "../lib/task-manager.js";
+import { sessionAgents, TaskManager } from "../lib/task-manager.js";
 
 const shared = {
   worktree: Type.Optional(Type.String({ description: "Explicit Orca workspace selector; managed shell tasks currently require path:<this session cwd>." })),
@@ -80,17 +80,16 @@ export default function foregroundFirst(pi) {
     execute: (_id, input, _signal, _onUpdate, ctx) => asResult(tasks.kill(ctx, input.taskId)),
   });
   pi.registerTool({
-    name: "orca_agent", label: "Visible Orca Agent",
-    description: "Launch a substantial, user-confirmed native Orca worker. Follows Chat UI settings (chat or terminal). Interactive agents do not exit after each answer: use the orchestration skill for supervised return messages. For automatic exit-based completion of a noninteractive CLI agent, run its explicit command with bg_run instead.",
-    promptSnippet: "Launch a user-confirmed native interactive Orca worker",
+    name: "orca_agent", label: "Visible Pi Worker",
+    description: "Launch a user-confirmed, long-lived interactive Pi worker in a visible Orca tab, for a worker the user will drive themselves. It always runs the Pi harness; choose another model with `model`. Not for subagent fan-out: use the `agent` tool, whose agents already open as visible Pi tabs in Orca and report back automatically. Interactive workers do not exit after each answer: use the orchestration skill for supervised return messages.",
+    promptSnippet: "Launch a user-confirmed interactive Pi worker in a visible Orca tab",
     parameters: Type.Object({
-      agent: Type.String({ minLength: 1, description: "Installed Orca agent id, e.g. pi, claude, or codex" }),
       prompt: Type.String({ minLength: 1, description: "Self-contained task brief; parent context is not copied automatically" }),
-      model: Type.Optional(Type.String({ minLength: 1 })),
+      model: Type.Optional(Type.String({ minLength: 1, description: "Pi model, e.g. anthropic/claude-sonnet-5-5 or openai-codex/gpt-6.1-sol" })),
       effort: Type.Optional(Type.String({ minLength: 1, description: "Requires an explicit model" })),
       ...shared,
     }),
-    execute: (_id, input, signal, _onUpdate, ctx) => launchVisible(pi, "agent", input, ctx, signal),
+    execute: (_id, input, signal, _onUpdate, ctx) => launchVisible(pi, "agent", { ...input, agent: "pi" }, ctx, signal),
   });
   pi.registerCommand("bg", {
     description: "Run an explicitly requested managed visible shell job: /bg <command>",
@@ -101,10 +100,12 @@ export default function foregroundFirst(pi) {
     },
   });
   for (const name of ["jobs", "tasks"]) pi.registerCommand(name, {
-    description: "List this session's managed visible background tasks",
+    description: "List this session's background jobs and agents, each in its own Orca tab",
     handler: async (_args, ctx) => {
-      const list = tasks.status(ctx);
-      ctx.ui.notify(list.length ? list.map((task) => `${task.id}  ${task.status}  ${task.name}`).join("\n") : "No managed tasks in this session.", "info");
+      const jobs = tasks.status(ctx).map((task) => `${task.id}  ${task.status}  ${task.name}  (${task.handle ?? "no tab"})`);
+      const agents = sessionAgents(ctx.sessionManager.getEntries()).map((agent) => `${agent.id}  ${agent.status}  tab "agent · ${agent.description}"`);
+      const sections = [jobs.length && ["Jobs:", ...jobs].join("\n"), agents.length && ["Agents:", ...agents].join("\n")].filter(Boolean);
+      ctx.ui.notify(sections.length ? sections.join("\n\n") : "No background jobs or agents in this session.", "info");
     },
   });
   pi.registerCommand("logs", { description: "Read task logs: /logs <task UUID>", handler: async (id, ctx) => ctx.ui.notify(JSON.stringify(tasks.logs(ctx, id.trim()), null, 2), "info") });
@@ -119,6 +120,6 @@ export default function foregroundFirst(pi) {
   });
   pi.registerCommand("foreground-first", {
     description: "Explain foreground-first execution and managed visible tasks",
-    handler: async (_args, ctx) => ctx.ui.notify("Routine work stays foreground. bg_run / orca_terminal / /bg provide visible managed jobs with logs, status, stop, timeout, and automatic completion follow-up. /jobs /logs /kill inspect them. Orca owns jobs across Pi reload/exit; resume the same session to recover notifications. orca_agent launches native interactive workers.", "info"),
+    handler: async (_args, ctx) => ctx.ui.notify("Routine work stays foreground. bg_run / orca_terminal / /bg provide visible managed jobs with logs, status, stop, timeout, and automatic completion follow-up. /jobs /logs /kill inspect them. Orca owns jobs across Pi reload/exit; resume the same session to recover notifications. orca_agent launches a user-confirmed interactive Pi worker; subagents from the agent tool open as visible Pi tabs on their own.", "info"),
   });
 }

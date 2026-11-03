@@ -41,7 +41,7 @@ Start a server or another command you want to leave running:
 It opens in an Orca tab without switching focus. Pi returns a task ID and log path. When the command exits, a notification brings the result back into the conversation and wakes Pi for a follow-up.
 
 ```text
-/jobs                    List tasks in this session
+/jobs                    List this session's jobs and agents
 /logs <task-id>           Read a task's output
 /kill <task-id>           Stop a task
 /bg-rerun <task-id>       Run its command again as a new task
@@ -49,7 +49,7 @@ It opens in an Orca tab without switching focus. Pi returns a task ID and log pa
 
 `/tasks` is an alias for `/jobs`. `/foreground-first` shows a short explanation of the workflow.
 
-You can also ask Pi to run something in the background. It uses `bg_run` and opens the terminal straight away, without a confirmation dialog. Only `orca_agent`, which starts another agent session, still asks first.
+You can also ask Pi to run something in the background. It uses `bg_run` and opens the terminal straight away, without a confirmation dialog. Only `orca_agent`, which starts a long-lived interactive Pi worker, still asks first.
 
 Foreground-first is guidance, not a restriction on Pi's shell tool. The point is to keep routine reads, edits and checks in the conversation, and use background execution when you ask for it, for a server or watcher, or when there's genuinely separate work to do.
 
@@ -62,7 +62,7 @@ Foreground-first is guidance, not a restriction on Pi's shell tool. The point is
 | `bg_status` | Inspect a task, or list up to 50 recent tasks |
 | `bg_logs` | Read a saved log tail |
 | `bg_kill` | Request cancellation |
-| `orca_agent` | Open a native interactive Orca agent |
+| `orca_agent` | Open an interactive Pi worker in Orca, with an optional model |
 
 For example, Pi can call `bg_run` with:
 
@@ -112,16 +112,18 @@ A noninteractive agent command can use the same background runner:
 
 Its output stays visible, and Pi receives the result when the command exits. Add the CLI's model/provider flags if you want a specific model. The worker uses its normal credentials and permissions; it doesn't inherit the parent conversation automatically.
 
-For an interactive worker, use `orca_agent`:
+For an interactive worker, use `orca_agent`. It always runs Pi; pick another model with `model`:
 
 ```json
 {
-  "agent": "pi",
-  "prompt": "Review the authentication changes without editing files. Report findings with paths."
+  "prompt": "Review the authentication changes without editing files. Report findings with paths.",
+  "model": "openai-codex/gpt-6.1-sol"
 }
 ```
 
 It follows your Orca Chat UI setting, opening either a chat or terminal. Optional fields are `model`, `effort`, `worktree` and `focus`; `effort` requires an explicit `model`.
+
+For subagents and review panels, the guidelines point the model at an `agent` tool instead, such as pstack's, whose agents open as visible Pi tabs in Orca and report back on their own.
 
 Interactive agents stay alive after answering, so this tool only returns the launch and prompt-delivery result. Use the `orchestration` skill for coordinated return messages, or a noninteractive command when you want exit-based completion. The `orca-cli` skill covers handoffs and worktrees. Separate workers that edit files should use separate worktrees.
 
@@ -137,7 +139,7 @@ Task records and logs are stored under:
 
 The runner saves and synchronizes its logs before publishing a final status. The monitor checks Pi's transcript before marking a notification delivered. A crash between queuing and saving a notification can cause it to be delivered again on resume; delivery isn't guaranteed to be exactly once across a crash.
 
-The footer shows active and finished counts. The extension also sends lifecycle events to Orca's existing Pi status integration. It doesn't need the model to poll for progress.
+The footer shows one line, `bg: N jobs · M agents running · /jobs`, only while something runs. Agents are counted from the `pstack-agents` entries the pstack `agent` tool records in the session. The extension also sends lifecycle events to Orca's existing Pi status integration. It doesn't need the model to poll for progress.
 
 A few things to keep in mind:
 

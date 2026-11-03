@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `orca_agent` always launches Pi (no `agent` parameter); pick another model with `model`.
+- Guidelines route subagents to an `agent` tool that opens visible Pi tabs, and rule out Claude Code/Codex workers.
+- One footer line, `bg: N jobs · M agents running · /jobs`, shown only while something runs; `/jobs` lists jobs and pstack agents with their Orca tabs.
+
 ## 0.3.1
 
 - README: npm, CI, license and Pi package badges; removed the outdated notice saying npm only had a placeholder.

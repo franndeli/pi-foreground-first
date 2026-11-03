@@ -258,3 +258,13 @@ test("invalid timeout and remote targets launch nothing, and launching never ask
   await assert.rejects(h.manager.run({ name: "test", command: "true", worktree: "name:remote" }, h.ctx), /local cwd/);
   assert.equal(calls.length, 0); assert.deepEqual(listTasks(h.root), []);
 });
+
+test("one background status line counts running jobs and pstack agents, and disappears when nothing runs", async () => {
+  const { backgroundStatus, sessionAgents } = await import("../lib/task-manager.js");
+  const record = (id, status) => ({ type: "custom", customType: "pstack-agents", data: { agent: { id, description: "d" + id }, status } });
+  const agents = sessionAgents([record("a1", "running"), record("a2", "running"), record("a2", "completed"), { type: "message" }]);
+  assert.deepEqual(agents.map((agent) => [agent.id, agent.status]), [["a1", "running"], ["a2", "completed"]]);
+  assert.equal(backgroundStatus([{ status: "running" }, { status: "completed" }], agents), "bg: 1 job · 1 agent running · /jobs");
+  assert.equal(backgroundStatus([{ status: "running" }, { status: "starting" }], []), "bg: 2 jobs running · /jobs");
+  assert.equal(backgroundStatus([{ status: "failed" }], [{ status: "stopped" }]), undefined);
+});
