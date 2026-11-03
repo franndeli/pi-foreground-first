@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - `orca_agent` always launches Pi (no `agent` parameter); pick another model with `model`.
 - Guidelines route subagents to an `agent` tool that opens visible Pi tabs, and rule out Claude Code/Codex workers.
